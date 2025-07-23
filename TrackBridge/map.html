@@ -1,0 +1,129 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Offline Map Preview</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Leaflet CSS from jsdelivr -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        html, body, #map {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Layer toggles -->
+    <div id="layerControls" style="position:absolute; top:10px; left:10px; z-index:1000;
+                              background:white; padding:5px; border-radius:4px;">
+        <label><input type="checkbox" value="Ground" checked /> Ground</label><br />
+        <label><input type="checkbox" value="Air" checked /> Air</label><br />
+        <label><input type="checkbox" value="Sensor" checked /> Sensor</label><br />
+        <label><input type="checkbox" value="Civilian" checked /> Civilian</label>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS from jsdelivr -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Utility to read ?localMaxZoom= param
+        function getLocalMaxZoom() {
+            var params = new URLSearchParams(window.location.search);
+            var z = parseInt(params.get('localMaxZoom'));
+            return isNaN(z) ? 0 : z;
+        }
+
+        // 1. Create the map, restricting zoom to available local tiles
+        var maxZoom = getLocalMaxZoom();
+            var map = L.map('map', {
+                minZoom: 0,
+                maxZoom: maxZoom,
+                center: [0, 0],
+                zoom: 0,
+                zoomControl: false    // disable the default zoom buttons
+            });
+
+        // add zoom buttons on top‐right instead of the default top‐left
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+
+        // 2. Add only the LOCAL tile layer — no online fallback
+        L.tileLayer('https://appassets/tiles/{z}/{x}/{y}.png', {
+            minZoom: 0,
+            maxZoom: maxZoom,
+            errorTileUrl: ''  // hide missing tiles
+        }).addTo(map);
+
+        // store markers by track ID
+        // store all markers by track ID
+        var markers = {};
+        // also store arrays of markers by track type
+        var layers = {
+            Ground: [],
+            Air: [],
+            Sensor: [],
+            Civilian: []
+        };
+
+
+        window.addOrUpdateMarker = function (data) {
+            // remove existing marker if any
+            if (markers[data.id]) {
+                map.removeLayer(markers[data.id]);
+            }
+            // also remove from its old layer array
+            var oldType = markers[data.id].options.trackType;
+            layers[oldType] = layers[oldType].filter(m => m !== markers[data.id]);
+
+            // create a new marker at the track’s location
+            var marker = L.marker([data.lat, data.lon], { trackType: data.type }).addTo(map);
+            marker.bindTooltip(data.label, { permanent: true, direction: 'right' });
+            // remember in its new layer array
+            layers[data.type].push(marker);
+            // on click, show a popup with details
+            marker.on('click', function () {
+                var html =
+                    'ID: ' + data.id + '<br>' +
+                    'Marking: ' + data.label + '<br>' +
+                    'Lat: ' + data.lat + '<br>' +
+                    'Lon: ' + data.lon;
+                marker.bindPopup(html).openPopup();
+            });
+            // remember it for future updates
+            markers[data.id] = marker;
+        };
+
+        // show or hide all markers of a given type
+        window.toggleLayer = function (type, visible) {
+            layers[type].forEach(marker => {
+                if (visible) map.addLayer(marker);
+                else map.removeLayer(marker);
+            });
+        };
+
+        // when any layer checkbox changes, toggle that layer on the map
+        document.querySelectorAll('#layerControls input[type=checkbox]')
+            .forEach(cb => {
+                cb.addEventListener('change', function () {
+                    window.toggleLayer(this.value, this.checked);
+                });
+            });
+
+        // 3. If MainWindow called fitBounds via JS injection, it will pan/zoom here.
+        //    Otherwise map stays at world-overview (zoom 0).
+
+    </script>
+</body>
+</html>

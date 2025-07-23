@@ -1,0 +1,61 @@
+﻿<Window x:Class="TrackBridge.FilterSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Filter Settings"
+        Height="350" Width="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Domains label -->
+            <RowDefinition Height="*"/>
+            <!-- Domains checkboxes -->
+            <RowDefinition Height="Auto"/>
+            <!-- Kinds label -->
+            <RowDefinition Height="*"/>
+            <!-- Kinds checkboxes -->
+            <RowDefinition Height="Auto"/>
+            <!-- PublishOnly -->
+            <RowDefinition Height="Auto"/>
+            <!-- Buttons -->
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Domains -->
+        <TextBlock Grid.Row="0" FontWeight="Bold">Allowed Domains</TextBlock>
+        <ScrollViewer Grid.Row="1" Height="100" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="DomainPanel" />
+        </ScrollViewer>
+
+        <!-- Kinds -->
+        <TextBlock Grid.Row="2" FontWeight="Bold" Margin="0,10,0,0">Allowed Kinds</TextBlock>
+        <ScrollViewer Grid.Row="3" Height="100" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="KindPanel" />
+        </ScrollViewer>
+
+        <!-- Publish Only -->
+        <CheckBox x:Name="PublishOnlyCheckBox"
+                  Grid.Row="4"
+                  Margin="0,10,0,0"
+                  Content="Publish Only"/>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="5"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,10,0,0">
+            <Button x:Name="SaveButton"
+                    Width="75" Margin="0,0,5,0"
+                    Content="Save"
+                    Click="Save_Click"/>
+            <Button x:Name="CancelButton"
+                    Width="75"
+                    Content="Cancel"
+                    Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

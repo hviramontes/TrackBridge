@@ -1,0 +1,73 @@
+﻿<Window x:Class="TrackBridge.NetworkSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Network Settings"
+        Height="220" Width="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- DIS IP -->
+            <RowDefinition Height="Auto"/>
+            <!-- DIS Port -->
+            <RowDefinition Height="Auto"/>
+            <!-- CoT IP -->
+            <RowDefinition Height="Auto"/>
+            <!-- CoT Port -->
+            <RowDefinition Height="Auto"/>
+            <!-- Buttons -->
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- DIS IP -->
+        <TextBlock Grid.Row="0" Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Margin="0,0,5,5">DIS IP:</TextBlock>
+        <TextBox x:Name="DisIpTextBox"
+                 Grid.Row="0" Grid.Column="1"
+                 Margin="0,0,0,5"/>
+
+        <!-- DIS Port -->
+        <TextBlock Grid.Row="1" Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Margin="0,0,5,5">DIS Port:</TextBlock>
+        <TextBox x:Name="DisPortTextBox"
+                 Grid.Row="1" Grid.Column="1"
+                 Margin="0,0,0,5"/>
+
+        <!-- CoT IP -->
+        <TextBlock Grid.Row="2" Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Margin="0,0,5,5">CoT IP:</TextBlock>
+        <TextBox x:Name="CotIpTextBox"
+                 Grid.Row="2" Grid.Column="1"
+                 Margin="0,0,0,5"/>
+
+        <!-- CoT Port -->
+        <TextBlock Grid.Row="3" Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Margin="0,0,5,10">CoT Port:</TextBlock>
+        <TextBox x:Name="CotPortTextBox"
+                 Grid.Row="3" Grid.Column="1"
+                 Margin="0,0,0,10"/>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button x:Name="SaveButton"
+                    Width="75" Margin="0,0,5,0"
+                    Content="Save"
+                    Click="Save_Click"/>
+            <Button x:Name="CancelButton"
+                    Width="75"
+                    Content="Cancel"
+                    Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

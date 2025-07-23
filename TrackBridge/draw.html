@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Select Download Area</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Leaflet core CSS -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Leaflet.draw CSS (no integrity) -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+
+    <style>
+        html, body, #map {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- Leaflet core JS -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Leaflet.draw JS (no integrity) -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+    <script>
+        // 1. Initialize map with sensible zoom limits
+        var map = L.map('map', {
+            minZoom: 0,
+            maxZoom: 19
+        }).setView([20, 0], 2);
+
+        // 2. Always show OSM base tiles so you never see blank
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // 3. Feature group for rectangle
+        var drawnItems = new L.FeatureGroup().addTo(map);
+
+        // 4. Draw control (rectangle only)
+        var drawControl = new L.Control.Draw({
+            draw: {
+                rectangle: { shapeOptions: { color: '#ff7800', weight: 2 } },
+                polygon: false,
+                polyline: false,
+                circle: false,
+                circlemarker: false,
+                marker: false
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+        map.addControl(drawControl);
+
+        // 5. When the user draws a rectangle, send SW/NE back to WPF
+        map.on('draw:created', function (e) {
+            drawnItems.clearLayers();
+            var layer = e.layer.addTo(drawnItems);
+            var b = layer.getBounds();
+            window.chrome.webview.postMessage({
+                type: 'download-area',
+                southWest: { lat: b.getSouthWest().lat, lon: b.getSouthWest().lng },
+                northEast: { lat: b.getNorthEast().lat, lon: b.getNorthEast().lng }
+            });
+        });
+    </script>
+</body>
+</html>

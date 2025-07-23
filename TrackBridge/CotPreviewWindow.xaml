@@ -1,0 +1,29 @@
+﻿<Window x:Class="TrackBridge.CotPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CoT Preview" Height="400" Width="600"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBox x:Name="CotXmlTextBox"
+                 Grid.Row="0"
+                 FontFamily="Consolas"
+                 FontSize="12"
+                 TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Auto"
+                 IsReadOnly="True"/>
+
+        <Button Grid.Row="1"
+                Content="Close"
+                Width="80"
+                HorizontalAlignment="Right"
+                Margin="0,10,0,0"
+                Click="CloseButton_Click"/>
+    </Grid>
+</Window>
