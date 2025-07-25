@@ -184,11 +184,23 @@ namespace TrackBridge.DIS
                     }
                 }
 
-                // If no locked marking, use raw marking from DIS (to be implemented later)
+                // If not locked, extract marking from DIS PDU (bytes 72–82, null-terminated)
+                if (!track.IsCustomMarkingLocked && buffer.Length >= 83)
+                {
+                    byte[] markingBytes = new byte[11];
+                    Array.Copy(buffer, 72, markingBytes, 0, 11);
+                    string marking = System.Text.Encoding.ASCII.GetString(markingBytes).TrimEnd('\0');
+
+                    if (!string.IsNullOrWhiteSpace(marking))
+                        track.CustomMarking = marking;
+                }
+
+                // Fallback marking if nothing else
                 if (string.IsNullOrWhiteSpace(track.CustomMarking))
                 {
-                    track.CustomMarking = entityKey; // fallback for now
+                    track.CustomMarking = entityKey;
                 }
+
 
                 // Update cache
                 trackCache[entityKey] = track;
