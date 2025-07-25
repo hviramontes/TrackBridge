@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -12,6 +13,8 @@ namespace TrackBridge.DIS
     {
         private UdpClient udpClient;
         private CancellationTokenSource cts;
+        private readonly Dictionary<string, EntityTrack> trackCache = new Dictionary<string, EntityTrack>();
+
 
         // Event raised when an Entity PDU is received and parsed
         public event Action<EntityTrack> EntityReceived;
@@ -152,11 +155,12 @@ namespace TrackBridge.DIS
 
                 // Log for debugging
                 Console.WriteLine($"DIS Parsed: EntityID={siteId}:{appId}:{entityId}, ForceID={forceId}, Type={entityKind}:{domain}:{country}:{category}, ECEF={x},{y},{z}, LLA={lat},{lon},{hae}, CountryCode={countryCode}, TrackType={trackType}");
+                string entityKey = $"{siteId}:{appId}:{entityId}";
 
-                return new EntityTrack
+                var track = new EntityTrack
                 {
-                    EntityId = $"{siteId}:{appId}:{entityId}",
-                    Id = $"{siteId}:{appId}:{entityId}".GetHashCode(),
+                    EntityId = entityKey,
+                    Id = entityKey.GetHashCode(),
                     PlatformType = GetPlatformType(entityKind, category),
                     TrackType = trackType,
                     Lat = lat,
@@ -169,6 +173,28 @@ namespace TrackBridge.DIS
                     IconType = iconType,
                     Publish = true
                 };
+
+                // Check cache for previous version
+                if (trackCache.TryGetValue(entityKey, out var previous))
+                {
+                    if (previous.IsCustomMarkingLocked)
+                    {
+                        track.CustomMarking = previous.CustomMarking;
+                        track.IsCustomMarkingLocked = true;
+                    }
+                }
+
+                // If no locked marking, use raw marking from DIS (to be implemented later)
+                if (string.IsNullOrWhiteSpace(track.CustomMarking))
+                {
+                    track.CustomMarking = entityKey; // fallback for now
+                }
+
+                // Update cache
+                trackCache[entityKey] = track;
+
+                return track;
+
             }
             catch (Exception ex)
             {

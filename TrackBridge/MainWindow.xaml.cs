@@ -1,23 +1,25 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Microsoft.Win32;
+using System.Xml.Linq;
 using TrackBridge.CoT;
 using TrackBridge.DIS;
-using System.Net.NetworkInformation;
-using System.Xml.Linq;
-using System.Globalization;
-using System.Net;
-using System.Collections.ObjectModel;
-using System.Threading.Tasks;
 
 
 namespace TrackBridge
@@ -154,6 +156,50 @@ namespace TrackBridge
             // Whenever user reorders or resizes a column, persist layout immediately
             EntityGrid.ColumnReordered += (s, e) => SaveDataGridLayout();
 
+            EntityGrid.MouseDoubleClick += EntityGrid_MouseDoubleClick;
+
+        }
+        private void ApplySettings_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // DIS IP
+                if (DisIpComboBox.SelectedItem is ComboBoxItem selectedItem &&
+                    selectedItem.Tag is string disIp)
+                {
+                    NetworkConfig.DisIp = disIp;
+                }
+
+                // DIS Port
+                if (int.TryParse(DisPortTextBox.Text, out var disPort))
+                {
+                    NetworkConfig.DisPort = disPort;
+                }
+
+                // Apply DIS changes
+                _disReceiver.StartListening(NetworkConfig.DisIp, NetworkConfig.DisPort);
+                Log($"[INFO] DIS set to {NetworkConfig.DisIp}:{NetworkConfig.DisPort}");
+
+                // CoT IP
+                NetworkConfig.CotIp = CotIpTextBox.Text;
+
+                // CoT Port
+                if (int.TryParse(CotPortTextBox.Text, out var cotPort))
+                {
+                    NetworkConfig.CotPort = cotPort;
+                }
+
+                // Apply CoT changes
+                _cotSender = new CotUdpSender(NetworkConfig.CotIp, NetworkConfig.CotPort);
+                Log($"[INFO] CoT set to {NetworkConfig.CotIp}:{NetworkConfig.CotPort}");
+
+                ErrorText.Text = ""; // clear any previous error
+            }
+            catch (Exception ex)
+            {
+                ErrorText.Text = "Apply failed: " + ex.Message;
+                Log($"[ERROR] Apply failed: {ex.Message}");
+            }
         }
 
 
@@ -199,48 +245,7 @@ namespace TrackBridge
 
         // ─── LostFocus Handlers ─────────────────
       
-        
-        private void DisPortTextBox_LostFocus(object s, RoutedEventArgs e)
-        {
-            if (!int.TryParse(DisPortTextBox.Text, out var p)) return;
-
-            NetworkConfig.DisPort = p;
-            try
-            {
-                _disReceiver.StartListening(NetworkConfig.DisIp, p);
-                Dispatcher.Invoke(() =>
-                {
-                    ErrorText.Text = "";
-                    Log($"[INFO] DIS set to {NetworkConfig.DisIp}:{p}");
-                });
-            }
-            catch (Exception ex)
-            {
-                Dispatcher.Invoke(() =>
-                {
-                    ErrorText.Text = "DIS listen error: " + ex.Message;
-                    Log($"[ERROR] DIS listen failed: {ex.Message}");
-                });
-            }
-        }
-
-
-        private void CotIpTextBox_LostFocus(object s, RoutedEventArgs e)
-        {
-            NetworkConfig.CotIp = CotIpTextBox.Text;
-            _cotSender = new CotUdpSender(NetworkConfig.CotIp, NetworkConfig.CotPort);
-            Log($"[INFO] CoT set to {NetworkConfig.CotIp}:{NetworkConfig.CotPort}");
-        }
-
-        private void CotPortTextBox_LostFocus(object s, RoutedEventArgs e)
-        {
-            if (int.TryParse(CotPortTextBox.Text, out var p))
-            {
-                NetworkConfig.CotPort = p;
-                _cotSender = new CotUdpSender(NetworkConfig.CotIp, p);
-                Log($"[INFO] CoT set to {NetworkConfig.CotIp}:{p}");
-            }
-        }
+    
 
         // ─── Heartbeat & Entity ─────────────────
         private void OnHeartbeatTimerElapsed(object s, ElapsedEventArgs e)
@@ -273,10 +278,8 @@ namespace TrackBridge
         private void OnEntityReceived(EntityTrack track)
         {
             // 1) Debug log & DIS indicator
-            Dispatcher.Invoke(() => {
-                Log($"[DEBUG] OnEntityReceived → ID={track.Id}");
-                DisIndicator.Fill = Brushes.Green;
-            });
+         
+
             _lastEntityReceived = DateTime.Now;
 
             // 2) Build and save CoT XML
@@ -884,26 +887,33 @@ namespace TrackBridge
             string term = SearchTextBox.Text.Trim().ToLowerInvariant();
             if (string.IsNullOrEmpty(term))
             {
-                ApplyFilters();
+                EntityGrid.ItemsSource = _entityTracks;
                 return;
             }
 
-            // Filter in-memory list by ID or CustomMarking
-            var results = _entityTracks
-                .Where(t =>
-                    t.Id.ToString().Contains(term) ||
-                    (t.CustomMarking?.ToLowerInvariant().Contains(term) ?? false))
-                .ToList();
+            // Apply view filtering instead of swapping the source
+            var view = CollectionViewSource.GetDefaultView(_entityTracks);
+            view.Filter = obj =>
+            {
+                var t = obj as EntityTrack;
+                if (t == null) return false;
+                return t.Id.ToString().Contains(term) ||
+                       (t.CustomMarking?.ToLowerInvariant().Contains(term) ?? false);
+            };
+            view.Refresh();
 
-            EntityGrid.ItemsSource = results;
         }
+
 
         /// <summary>Clear search box and show all tracks.</summary>
         private void ClearSearch_Click(object sender, RoutedEventArgs e)
         {
             SearchTextBox.Clear();
-            ApplyFilters();
+            var view = CollectionViewSource.GetDefaultView(_entityTracks);
+            view.Filter = null;
+            view.Refresh();
         }
+
 
 
         // ─── Helpers: DataGrid Layout ─────────────────
@@ -1062,28 +1072,24 @@ namespace TrackBridge
             }
         }
 
-        private void DisIpComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+      
+        private void EntityGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (DisIpComboBox.SelectedItem is ComboBoxItem item
-                && item.Tag is string ip)
+            if (EntityGrid.SelectedItem is EntityTrack selectedTrack)
             {
-                NetworkConfig.DisIp = ip;
-                try
+                var detailWindow = new TrackDetailWindow(selectedTrack)
                 {
-                    _disReceiver.StartListening(ip, NetworkConfig.DisPort);
-                    Dispatcher.Invoke(() =>
-                    {
-                        ErrorText.Text = "";
-                        Log($"[INFO] DIS set to {ip}:{NetworkConfig.DisPort}");
-                    });
-                }
-                catch (Exception ex)
+                    Owner = this
+                };
+
+                if (detailWindow.ShowDialog() == true)
                 {
-                    Dispatcher.Invoke(() =>
-                    {
-                        ErrorText.Text = "DIS listen error: " + ex.Message;
-                        Log($"[ERROR] DIS listen failed: {ex.Message}");
-                    });
+                    // Update the track with user edits
+                    selectedTrack.CustomMarking = detailWindow.CustomMarking;
+                    selectedTrack.IsCustomMarkingLocked = detailWindow.IsLocked;
+
+                    // Refresh the DataGrid
+                    EntityGrid.Items.Refresh();
                 }
             }
         }

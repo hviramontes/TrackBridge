@@ -58,5 +58,11 @@ namespace TrackBridge
         /// Now read/write so we can assign different precisions.
         /// </summary>
         public string Mgrs { get; set; }
+
+        /// <summary>
+        /// If true, the CustomMarking is locked and will not be overwritten by new DIS data.
+        /// </summary>
+        public bool IsCustomMarkingLocked { get; set; } = false;
+
     }
 }

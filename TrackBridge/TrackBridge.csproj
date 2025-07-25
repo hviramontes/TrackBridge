@@ -140,6 +140,9 @@
       <DependentUpon>InputDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="StaleOpacityConverter.cs" />
+    <Compile Include="TrackDetailWindow.xaml.cs">
+      <DependentUpon>TrackDetailWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="WindowSettings.cs" />
     <Page Include="CotPreviewWindow.xaml">
       <SubType>Designer</SubType>
@@ -189,6 +192,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="NetworkSettingsWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="TrackDetailWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

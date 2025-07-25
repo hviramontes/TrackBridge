@@ -51,48 +51,56 @@
         </Menu>
 
         <!-- Network & Search Panel -->
+        <!-- Network & Search Panel -->
         <DockPanel DockPanel.Dock="Top" Margin="5" LastChildFill="True">
             <!-- Left: DIS IP & Port -->
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,10,0">
                 <TextBlock Text="DIS IP:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                 <ComboBox x:Name="DisIpComboBox"
-                          Width="180"
-                          Margin="0,0,10,0"
-                          SelectionChanged="DisIpComboBox_SelectionChanged"/>   
+                  Width="180"
+                  Margin="0,0,10,0"/>
                 <TextBlock Text="Port:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                 <TextBox x:Name="DisPortTextBox"
-                         Width="60"
-                         LostFocus="DisPortTextBox_LostFocus"/>
+                 Width="60"
+                 Margin="0,0,5,0"/>
+                <Button Content="Apply"
+                x:Name="ApplyDisButton"
+                Click="ApplySettings_Click"
+                Width="75"
+                Margin="0,0,0,0"
+                VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- Center: Search -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBox x:Name="SearchTextBox"
-                         Width="150"
-                         ToolTip="Enter entity ID or marking"
-                         Margin="0,0,5,0"/>
+                 Width="150"
+                 ToolTip="Enter entity ID or marking"
+                 Margin="0,0,5,0"/>
                 <Button Content="Search"
-                        Click="Search_Click"
-                        Margin="0,0,5,0"
-                        MinWidth="75"/>
-                <Button Content="Clear"
-                        Click="ClearSearch_Click"
-                        MinWidth="75"/>
+                Click="Search_Click"
+                MinWidth="75"/>
             </StackPanel>
 
             <!-- Right: CoT IP & Port -->
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="10,0,0,0">
                 <TextBlock Text="CoT IP:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                 <TextBox x:Name="CotIpTextBox"
-                         Width="120"
-                         LostFocus="CotIpTextBox_LostFocus"
-                         Margin="0,0,10,0"/>
+                 Width="120"
+                 Margin="0,0,10,0"/>
                 <TextBlock Text="Port:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                 <TextBox x:Name="CotPortTextBox"
-                         Width="60"
-                         LostFocus="CotPortTextBox_LostFocus"/>
+                 Width="60"
+                 Margin="0,0,5,0"/>
+                <Button Content="Apply"
+                x:Name="ApplyCotButton"
+                Click="ApplySettings_Click"
+                Width="75"
+                Margin="0,0,0,0"
+                VerticalAlignment="Center"/>
             </StackPanel>
         </DockPanel>
+
 
         <!-- Playback controls + Test Track button -->
         <DockPanel DockPanel.Dock="Bottom" Margin="5" LastChildFill="False">
@@ -138,7 +146,6 @@
                     <TextBlock Text="TAK"
                        VerticalAlignment="Center"
                        Margin="0,0,10,0"/>
-                    <!-- New Last Ping label -->
                     <TextBlock x:Name="LastPingText"
                        Text="Last Ping: --:--:--"
                        VerticalAlignment="Center"/>
@@ -155,8 +162,7 @@
             </StatusBarItem>
         </StatusBar>
 
-
-        <!-- Log output at very bottom -->
+        <!-- Log output -->
         <TextBox x:Name="LogOutput"
                  DockPanel.Dock="Bottom"
                  Height="100"
@@ -166,39 +172,38 @@
                  VerticalScrollBarVisibility="Auto"
                  TextWrapping="Wrap"/>
 
-        <!-- Entity DataGrid -->
+        <!-- Entity Grid -->
         <DataGrid x:Name="EntityGrid"
-          AlternationCount="2"
-          AlternatingRowBackground="LightGray"
-          AutoGenerateColumns="True"
-          EnableRowVirtualization="True"
-          VirtualizingPanel.VirtualizationMode="Recycling"
-          CanUserAddRows="False"
-          IsReadOnly="True"
-          CanUserSortColumns="True"
-          CanUserResizeColumns="True"
-          Margin="5">
+    AlternationCount="2"
+    AlternatingRowBackground="LightGray"
+    AutoGenerateColumns="False"
+    EnableRowVirtualization="True"
+    VirtualizingPanel.VirtualizationMode="Recycling"
+    CanUserAddRows="False"
+    IsReadOnly="True"
+    CanUserSortColumns="True"
+    CanUserResizeColumns="True"
+    Margin="5"
+    MouseDoubleClick="EntityGrid_MouseDoubleClick">
             <DataGrid.RowStyle>
                 <Style TargetType="DataGridRow">
                     <Setter Property="Opacity"
                             Value="{Binding Timestamp, Converter={StaticResource StaleOpacityConverter}}"/>
                 </Style>
             </DataGrid.RowStyle>
-            <!--
-<DataGrid.Columns>
-  <DataGridTextColumn Header="ID"      Binding="{Binding Id}"/>
-  <DataGridTextColumn Header="Marking" Binding="{Binding CustomMarking}"/>
-  <DataGridTextColumn Header="MGRS"    Binding="{Binding Mgrs}"/>
-  <DataGridTextColumn Header="Alt"     Binding="{Binding Alt}"/>
-  <DataGridTextColumn Header="Time"    Binding="{Binding Timestamp, StringFormat=HH:mm:ss}"/>
-  <DataGridTextColumn Header="Country" Binding="{Binding CountryCode}"/>
-  <DataGridTextColumn Header="Icon"    Binding="{Binding IconType}"/>
-</DataGrid.Columns>
--->
-
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID"      Binding="{Binding Id}" Width="Auto"/>
+                <DataGridTextColumn Header="Marking" Binding="{Binding CustomMarking}" Width="*"/>
+                <DataGridTextColumn Header="MGRS"    Binding="{Binding Mgrs}" Width="*"/>
+                <DataGridTextColumn Header="Alt"     Binding="{Binding Altitude}" Width="Auto"/>
+                <DataGridTextColumn Header="Time"    Binding="{Binding Timestamp, StringFormat=HH:mm:ss}" Width="Auto"/>
+                <DataGridTextColumn Header="Country" Binding="{Binding CountryCode}" Width="Auto"/>
+                <DataGridTextColumn Header="Icon"    Binding="{Binding IconType}" Width="Auto"/>
+                <DataGridCheckBoxColumn Header="🔒 Locked"
+                             Binding="{Binding IsCustomMarkingLocked}"
+                             IsReadOnly="True"
+                             Width="Auto" />
+            </DataGrid.Columns>
         </DataGrid>
-
     </DockPanel>
 </Window>
-
-
