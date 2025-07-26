@@ -33,12 +33,16 @@ namespace TrackBridge
         private readonly DisReceiver _disReceiver;
         private CotUdpSender _cotSender;
         private readonly Timer _heartbeatTimer;
+        private CotUdpSender cotSender;
         private readonly DispatcherTimer _statusTimer;
         private FilterSettings _currentFilters;
         private const string FilterFileName = "filters.json";
         private const string ProfilesFile = "filter_profiles.json";
         private const string WindowSettingsFile = "window_settings.json";
         private const string DataGridLayoutFile = "datagrid_layout.json";
+        private readonly CotHeartbeatManager heartbeatManager;
+
+        public static CotHeartbeatManager CotHeartbeatManager { get; private set; }
 
         // ─── Static default filter options ─────────────────
         // Since EntityTrack.Domain is an int, list those codes as strings:
@@ -78,6 +82,9 @@ namespace TrackBridge
         public MainWindow()
         {
             InitializeComponent();
+            cotSender = new CotUdpSender(NetworkConfig.CotIp, NetworkConfig.CotPort);
+
+            CotHeartbeatManager = new CotHeartbeatManager(_cotSender);
 
             EntityGrid.ItemsSource = _entityTracks;
 
@@ -95,6 +102,7 @@ namespace TrackBridge
             // Core services
             _disReceiver = new DisReceiver();
             _cotSender = new CotUdpSender(NetworkConfig.CotIp, NetworkConfig.CotPort);
+            heartbeatManager = new CotHeartbeatManager(cotSender);
             _heartbeatTimer = new Timer(5000) { AutoReset = true };
             // status-bar update every second
             _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -202,6 +210,39 @@ namespace TrackBridge
             }
         }
 
+        private void ApplyCotSettings_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(CotPortTextBox.Text, out int cotPort))
+            {
+                NetworkConfig.CotPort = cotPort;
+                _cotSender = new CotUdpSender(NetworkConfig.CotIp, NetworkConfig.CotPort);
+
+                CotHeartbeatManager.Stop();
+                CotHeartbeatManager = new CotHeartbeatManager(_cotSender);
+                CotHeartbeatManager.Start();
+
+                MessageBox.Show("CoT settings applied and heartbeat restarted.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("Invalid CoT port number.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ApplyHeartbeat_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(HeartbeatIntervalTextBox.Text, out int intervalSeconds))
+            {
+                heartbeatManager.IntervalSeconds = intervalSeconds;
+                LogOutput.AppendText($"[INFO] Updated heartbeat interval to {intervalSeconds} seconds.\n");
+            }
+            else
+            {
+                LogOutput.AppendText("[ERROR] Invalid heartbeat interval. Please enter a valid number.\n");
+            }
+        }
+
+
 
         // ─── Window Persistence ─────────────────
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -222,6 +263,9 @@ namespace TrackBridge
                 }
             }
             catch { }
+
+            HeartbeatIntervalTextBox.Text = CotHeartbeatManager.IntervalSeconds.ToString();  // 👈 Add this line
+
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -1093,6 +1137,16 @@ namespace TrackBridge
                 }
             }
         }
+
+        private void CotPortTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(CotPortTextBox.Text, out int newPort))
+            {
+                cotSender?.SetTarget(CotIpTextBox.Text, newPort);
+                Log("Updated CoT port via LostFocus.");
+            }
+        }
+
 
     }
 

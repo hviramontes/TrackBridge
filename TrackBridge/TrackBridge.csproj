@@ -131,6 +131,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="CoT\CotHeartbeatManager.cs" />
     <Compile Include="DataGridColumnSettings.cs" />
     <Compile Include="DownloadAreaWindow.xaml.cs">
       <DependentUpon>DownloadAreaWindow.xaml</DependentUpon>

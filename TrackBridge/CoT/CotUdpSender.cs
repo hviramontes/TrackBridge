@@ -65,5 +65,20 @@ namespace TrackBridge.CoT
         {
             udpClient?.Dispose();
         }
+
+        public void SendCot(string cotXml)
+        {
+            try
+            {
+                byte[] data = Encoding.UTF8.GetBytes(cotXml);
+                udpClient.Send(data, data.Length, targetIp, targetPort);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send CoT heartbeat: {ex.Message}");
+            }
+        }
+
+
     }
 }
