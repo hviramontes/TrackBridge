@@ -41,6 +41,8 @@ namespace TrackBridge
         private const string WindowSettingsFile = "window_settings.json";
         private const string DataGridLayoutFile = "datagrid_layout.json";
         private readonly CotHeartbeatManager heartbeatManager;
+        private MapWindow mapWindow;
+
 
         public static CotHeartbeatManager CotHeartbeatManager { get; private set; }
 
@@ -82,6 +84,10 @@ namespace TrackBridge
         public MainWindow()
         {
             InitializeComponent();
+
+            // 🌍 Open the MapWindow when MainWindow starts
+            mapWindow = new MapWindow();
+
             cotSender = new CotUdpSender(NetworkConfig.CotIp, NetworkConfig.CotPort);
 
             CotHeartbeatManager = new CotHeartbeatManager(_cotSender);
@@ -321,19 +327,23 @@ namespace TrackBridge
 
         private void OnEntityReceived(EntityTrack track)
         {
-            // 1) Debug log & DIS indicator
-         
-
             _lastEntityReceived = DateTime.Now;
-
-            // 2) Build and save CoT XML
             var xml = CotBuilder.BuildCotXml(track);
             SaveCotToDailyLog(xml);
 
-            // 3) Immediately add to grid
-            Dispatcher.Invoke(() => {
+            // 3) Immediately add to grid *and* update the map
+            Dispatcher.Invoke(() =>
+            {
+                // Add to the DataGrid
                 _entityTracks.Add(track);
                 Log($"[DEBUG] Collection count after Add: {_entityTracks.Count}");
+
+                // Refresh filters (so your grid stays consistent)
+                ApplyFilters();
+
+                // If the map window is open, push this marker
+                if (mapWindow != null && mapWindow.IsVisible)
+                    mapWindow.AddOrUpdateMarker(track);
             });
 
             // 4) Ping & send in background so UI stays responsive
@@ -368,6 +378,7 @@ namespace TrackBridge
                 }
             });
         }
+
 
 
 
@@ -682,9 +693,23 @@ namespace TrackBridge
         // ─── Map, Settings, Logs, Replay, TestTrack ─────────────────
         private void OpenMapPreview_Click(object s, RoutedEventArgs e)
         {
-            if (_mapWindow?.IsVisible == true) _mapWindow.Activate();
-            else new MapWindow { Owner = this }.Show();
+            if (mapWindow?.IsVisible == true)
+            {
+                mapWindow.Activate();
+            }
+            else
+            {
+                mapWindow = new MapWindow();
+                // now it's safe to set Owner and Show, because we're responding to a user action
+                mapWindow.Owner = this;
+                mapWindow.Show();
+            }
         }
+
+
+
+
+
         private void OpenDownloadArea_Click(object s, RoutedEventArgs e)
             => new DownloadAreaWindow { Owner = this }.Show();
         private void ImportMbtiles_Click(object s, RoutedEventArgs e)

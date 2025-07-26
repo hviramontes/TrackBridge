@@ -105,18 +105,21 @@ namespace TrackBridge
             var core = MapView.CoreWebView2;
             if (core == null) return;
 
+            // build a lightweight object to send to JS
             var marker = new
             {
                 id = track.Id,
-                lat = track.Latitude,
-                lon = track.Longitude,
+                lat = track.Lat,
+                lon = track.Lon,
                 label = string.IsNullOrEmpty(track.CustomMarking)
-                    ? track.Id.ToString()
-                    : track.CustomMarking,
-                type = track.TrackType    // ← new line
+                           ? track.Id.ToString()
+                           : track.CustomMarking,
+                type = track.TrackType,                               // your Ground/Air/Sensor/Civilian
+                timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
             };
             string json = JsonSerializer.Serialize(marker);
             await core.ExecuteScriptAsync($"window.addOrUpdateMarker({json});");
         }
+
     }
 }

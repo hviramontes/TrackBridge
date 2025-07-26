@@ -116,28 +116,35 @@
 
 
         <!-- Playback controls + Test Track button -->
+        <!-- Playback controls + Test Track + Open Map buttons -->
         <DockPanel DockPanel.Dock="Bottom" Margin="5" LastChildFill="False">
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                 <Button Content="Play"
-                        Click="PlayReplay_Click"
-                        Margin="0,0,5,0"
-                        MinWidth="75"/>
+                Click="PlayReplay_Click"
+                Margin="0,0,5,0"
+                MinWidth="75"/>
                 <Button Content="Pause"
-                        Click="PauseReplay_Click"
-                        Margin="0,0,5,0"
-                        MinWidth="75"/>
+                Click="PauseReplay_Click"
+                Margin="0,0,5,0"
+                MinWidth="75"/>
                 <Button Content="Stop"
-                        Click="StopReplay_Click"
-                        MinWidth="75"/>
+                Click="StopReplay_Click"
+                MinWidth="75"/>
             </StackPanel>
-            <Button Content="Test Track"
-                    Click="TestTrack_Click"
-                    DockPanel.Dock="Right"
-                    MinWidth="80"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    Padding="5,2"/>
+
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,0,0">
+                <Button Content="Test Track"
+                Click="TestTrack_Click"
+                MinWidth="80"
+                Padding="5,2"
+                Margin="0,0,5,0"/>
+                <Button Content="Open Map"
+                Click="OpenMapPreview_Click"
+                MinWidth="80"
+                Padding="5,2"/>
+            </StackPanel>
         </DockPanel>
+
 
         <!-- TAK Connectivity Indicator -->
         <StatusBar DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
