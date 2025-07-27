@@ -8,6 +8,9 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet.Draw CSS -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 
     <style>
         html, body, #map {
@@ -19,7 +22,7 @@
         #map {
             width: 100%;
         }
-        /* simple control panel styling */
+
         #layerControls {
             position: absolute;
             top: 10px;
@@ -43,20 +46,16 @@
 
     <div id="map"></div>
 
-    <!-- Leaflet JS -->
+    <!-- Leaflet & Draw JS -->
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
     <script>
-        // 1️⃣ Helpers
-
-        // read maxZoom param
+        // ─── Helpers ─────────────────────────────────────────────────────────────────
         function getLocalMaxZoom() {
             const p = new URLSearchParams(window.location.search);
             const z = parseInt(p.get('localMaxZoom'));
             return isNaN(z) ? 0 : z;
         }
-
-        // pick a color per track type
         function colorForType(type) {
             switch (type) {
                 case 'Ground': return 'blue';
@@ -67,7 +66,7 @@
             }
         }
 
-        // 2️⃣ Map setup
+        // ─── Initialize Map ────────────────────────────────────────────────────────────
         const maxZoom = getLocalMaxZoom();
         const map = L.map('map', {
             minZoom: 0,
@@ -77,25 +76,36 @@
             zoomControl: false
         });
         L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // load your local tiles from the virtual host at appassets
         L.tileLayer('https://appassets/tiles/{z}/{x}/{y}.png', {
-            minZoom, maxZoom, errorTileUrl: ''
+            minZoom: 0,
+            maxZoom: maxZoom,       // Leaflet’s overall cap
+            maxNativeZoom: maxZoom, // don’t go past real tile data
+            errorTileUrl: ''        // hide missing-tile errors
         }).addTo(map);
 
-        // storage
+        // Clamp zoom if Leaflet over-zooms beyond available tiles
+        map.on('zoomend', () => {
+            if (map.getZoom() > maxZoom) {
+                map.setZoom(maxZoom);
+            }
+        });
+
+        // ─── Marker Storage ───────────────────────────────────────────────────────────
         const markers = {};
         const layers = { Ground: [], Air: [], Sensor: [], Civilian: [] };
 
-        // 3️⃣ Main update function — called from WPF via ExecuteScriptAsync
         window.addOrUpdateMarker = function (data) {
             // remove old
             if (markers[data.id]) {
                 map.removeLayer(markers[data.id]);
-                const oldType = markers[data.id].options.trackType;
-                layers[oldType] = layers[oldType].filter(m => m !== markers[data.id]);
+                const old = markers[data.id].options.trackType;
+                layers[old] = layers[old].filter(m => m !== markers[data.id]);
             }
 
-            // create circleMarker color-coded
-            const marker = L.circleMarker([data.lat, data.lon], {
+            // draw a circleMarker
+            const m = L.circleMarker([data.lat, data.lon], {
                 radius: 8,
                 color: colorForType(data.type),
                 weight: 2,
@@ -104,32 +114,35 @@
                 timestamp: data.timestamp
             }).addTo(map);
 
-            marker.bindTooltip(data.label, { permanent: true, direction: 'right' });
-            marker.on('click', () => {
-                const html =
+            m.bindTooltip(data.label, { permanent: true, direction: 'right' });
+            m.on('click', () => {
+                m.bindPopup(
                     `ID: ${data.id}<br>` +
                     `Marking: ${data.label}<br>` +
                     `Lat: ${data.lat}<br>` +
-                    `Lon: ${data.lon}`;
-                marker.bindPopup(html).openPopup();
+                    `Lon: ${data.lon}`
+                ).openPopup();
             });
 
-            layers[data.type].push(marker);
-            markers[data.id] = marker;
+            layers[data.type].push(m);
+            markers[data.id] = m;
 
-            // auto-zoom to include all current markers
-            const positions = Object.values(markers).map(m => m.getLatLng());
-            if (positions.length) {
-                map.fitBounds(L.latLngBounds(positions), { padding: [20, 20] });
+            // auto-zoom to show all markers, but don’t exceed maxZoom
+            const pts = Object.values(markers).map(x => x.getLatLng());
+            if (pts.length) {
+                map.fitBounds(L.latLngBounds(pts), {
+                    padding: [20, 20],
+                    maxZoom: maxZoom
+                });
             }
         };
 
-        // 4️⃣ Stale-marker cleanup every 5s
+        // cleanup stale markers
         setInterval(() => {
             const now = Date.now();
-            for (const id in markers) {
+            for (let id in markers) {
                 const m = markers[id];
-                if (now - m.options.timestamp > 30000) { // older than 30s
+                if (now - m.options.timestamp > 30000) {
                     map.removeLayer(m);
                     layers[m.options.trackType] =
                         layers[m.options.trackType].filter(x => x !== m);
@@ -138,16 +151,52 @@
             }
         }, 5000);
 
-        // 5️⃣ Layer toggles
-        window.toggleLayer = function (type, visible) {
-            layers[type].forEach(m => {
-                visible ? map.addLayer(m) : map.removeLayer(m);
-            });
-        };
+        // layer toggles
         document.querySelectorAll('#layerControls input[type=checkbox]')
             .forEach(cb => cb.addEventListener('change', function () {
-                window.toggleLayer(this.value, this.checked);
+                layers[this.value].forEach(m => {
+                    this.checked ? map.addLayer(m) : map.removeLayer(m);
+                });
             }));
+
+        // ─── Leaflet.Draw Setup ───────────────────────────────────────────────────────
+        const drawLayer = new L.FeatureGroup();
+        map.addLayer(drawLayer);
+
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polyline: false,
+                polygon: false,
+                circle: false,
+                marker: false,
+                rectangle: {
+                    shapeOptions: { color: 'blue' }
+                }
+            },
+            edit: { featureGroup: drawLayer }
+        });
+        map.addControl(drawControl);
+
+        let lastBounds = null;
+        map.on(L.Draw.Event.CREATED, e => {
+            drawLayer.clearLayers();
+            const layer = e.layer;
+            drawLayer.addLayer(layer);
+            lastBounds = layer.getBounds();
+
+            window.chrome.webview.postMessage(JSON.stringify({
+                type: 'download-rectangle',
+                bounds: {
+                    sw: lastBounds.getSouthWest(),
+                    ne: lastBounds.getNorthEast()
+                }
+            }));
+        });
+
+        window.clearRectangle = () => {
+            drawLayer.clearLayers();
+            lastBounds = null;
+        };
     </script>
 </body>
 </html>

@@ -2,14 +2,13 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Select Download Area</title>
+    <title>Draw Area for Tile Download</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Leaflet core CSS -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-
-    <!-- Leaflet.draw CSS (no integrity) -->
+    <!-- Leaflet.draw CSS -->
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 
@@ -28,32 +27,36 @@
 <body>
     <div id="map"></div>
 
-    <!-- Leaflet core JS -->
+    <!-- Leaflet JS -->
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <!-- Leaflet.draw JS (no integrity) -->
+    <!-- Leaflet.draw JS (correct file) -->
     <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
     <script>
-        // 1. Initialize map with sensible zoom limits
-        var map = L.map('map', {
-            minZoom: 0,
-            maxZoom: 19
-        }).setView([20, 0], 2);
+        // 1) Initialize the map at a global view
+        const map = L.map('map').setView([0, 0], 2);
 
-        // 2. Always show OSM base tiles so you never see blank
+        // 2) Base layer: OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors'
+            attribution: '&copy; OpenStreetMap contributors',
+            minZoom: 0,
+            maxZoom: 18
         }).addTo(map);
 
-        // 3. Feature group for rectangle
-        var drawnItems = new L.FeatureGroup().addTo(map);
+        // 3) Prepare a FeatureGroup to hold drawn shapes
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
 
-        // 4. Draw control (rectangle only)
-        var drawControl = new L.Control.Draw({
+        // 4) Add the draw/edit toolbar (rectangle only + remove)
+        const drawControl = new L.Control.Draw({
+            position: 'topright',
             draw: {
-                rectangle: { shapeOptions: { color: '#ff7800', weight: 2 } },
+                rectangle: {
+                    shapeOptions: {
+                        color: '#ff7800',
+                        weight: 2
+                    }
+                },
                 polygon: false,
                 polyline: false,
                 circle: false,
@@ -67,17 +70,26 @@
         });
         map.addControl(drawControl);
 
-        // 5. When the user draws a rectangle, send SW/NE back to WPF
-        map.on('draw:created', function (e) {
+        // 5) Handle the creation event
+        map.on(L.Draw.Event.CREATED, function (e) {
+            // clear any existing rectangle
             drawnItems.clearLayers();
-            var layer = e.layer.addTo(drawnItems);
-            var b = layer.getBounds();
-            window.chrome.webview.postMessage({
-                type: 'download-area',
-                southWest: { lat: b.getSouthWest().lat, lon: b.getSouthWest().lng },
-                northEast: { lat: b.getNorthEast().lat, lon: b.getNorthEast().lng }
-            });
+
+            // add new rectangle
+            const layer = e.layer;
+            drawnItems.addLayer(layer);
+
+            // post bounds back to WPF
+            const b = layer.getBounds();
+            const msg = {
+                south: b.getSouth(),
+                west: b.getWest(),
+                north: b.getNorth(),
+                east: b.getEast()
+            };
+            window.chrome.webview.postMessage(msg);
         });
     </script>
 </body>
 </html>
+

@@ -3,6 +3,10 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using Microsoft.Web.WebView2.Core;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace TrackBridge
 {
@@ -10,6 +14,15 @@ namespace TrackBridge
     {
         // Holds the drawn rectangle bounds
         private double _south, _west, _north, _east;
+
+        // Shared HTTP client for fetching tiles
+        private static readonly HttpClient _httpClient = new HttpClient();
+
+        // Cancellation support
+        private CancellationTokenSource _downloadCts;
+
+        // Stopwatch for ETA calculation
+        private Stopwatch _downloadStopwatch;
 
         public DownloadAreaWindow()
         {
@@ -36,39 +49,16 @@ namespace TrackBridge
 
             var core = DownloadMapView.CoreWebView2;
 
-            // Determine where your HTML files live
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string htmlDir = Path.Combine(baseDir, "html");
-            string assetsDir;
+            string assetsDir = Directory.Exists(htmlDir) ? htmlDir : baseDir;
 
-            if (Directory.Exists(htmlDir))
-            {
-                assetsDir = htmlDir;
-            }
-            else if (Directory.Exists(baseDir))
-            {
-                assetsDir = baseDir;
-            }
-            else
-            {
-                MessageBox.Show(
-                    $"Cannot find HTML assets in either:\n  {htmlDir}\n  {baseDir}",
-                    "Asset Folder Missing",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-                return;
-            }
-
-            // Map the chosen directory under the virtual host "appassets"
             core.SetVirtualHostNameToFolderMapping(
                 "appassets",
                 assetsDir,
                 CoreWebView2HostResourceAccessKind.Allow);
 
-            // Listen for bounds messages from the page
             core.WebMessageReceived += OnWebMessageReceived;
-
-            // Finally, navigate to draw.html
             core.Navigate("https://appassets/draw.html");
         }
 
@@ -91,10 +81,21 @@ namespace TrackBridge
             }
         }
 
-        /// <summary>
-        /// Triggered when the user clicks Download Tiles.
-        /// </summary>
-        private void DownloadTilesButton_Click(object sender, RoutedEventArgs e)
+        /// <summary>Convert longitude to tile X at zoom z.</summary>
+        private int LonToTileX(double lon, int z)
+            => (int)Math.Floor((lon + 180.0) / 360.0 * (1 << z));
+
+        /// <summary>Convert latitude to tile Y at zoom z.</summary>
+        private int LatToTileY(double lat, int z)
+        {
+            double rad = lat * Math.PI / 180.0;
+            double n = Math.PI - 2.0 * Math.Log(
+                Math.Tan(Math.PI / 4.0 + rad / 2.0));
+            return (int)Math.Floor(n / (2.0 * Math.PI) * (1 << z));
+        }
+
+        /// <summary>Triggered when the user clicks Download Tiles.</summary>
+        private async void DownloadTilesButton_Click(object sender, RoutedEventArgs e)
         {
             int minZ = (int)MinZoomSlider.Value;
             int maxZ = (int)MaxZoomSlider.Value;
@@ -109,20 +110,116 @@ namespace TrackBridge
                 return;
             }
 
-            // TODO: Kick off your tile download using (_south,_west) to (_north,_east) at zooms minZ–maxZ
-            MessageBox.Show(
-                $"Downloading tiles for area:\n" +
-                $"SW({_south:F4}, {_west:F4}) to NE({_north:F4}, {_east:F4})\n" +
-                $"Zoom levels {minZ} to {maxZ}.",
-                "Download Started",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            // Start ETA stopwatch
+            _downloadStopwatch = Stopwatch.StartNew();
 
-            // Optionally close the window:
-            // this.Close();
+            // Prepare UI and cancellation
+            _downloadCts?.Cancel();
+            _downloadCts = new CancellationTokenSource();
+            var token = _downloadCts.Token;
+
+            DownloadTilesButton.IsEnabled = false;
+            CancelDownloadButton.IsEnabled = true;
+            MinZoomSlider.IsEnabled = false;
+            MaxZoomSlider.IsEnabled = false;
+
+            string tilesRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tiles");
+
+            // Compute total number of tiles
+            int totalTiles = 0;
+            for (int z = minZ; z <= maxZ; z++)
+            {
+                int xMin = LonToTileX(_west, z), xMax = LonToTileX(_east, z);
+                int yMin = LatToTileY(_north, z), yMax = LatToTileY(_south, z);
+                totalTiles += (xMax - xMin + 1) * (yMax - yMin + 1);
+            }
+
+            DownloadProgressBar.Value = 0;
+            DownloadProgressBar.Maximum = totalTiles;
+            DownloadStatusText.Text = $"0 / {totalTiles} tiles";
+
+            int completed = 0;
+            try
+            {
+                for (int z = minZ; z <= maxZ; z++)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    int xMin = LonToTileX(_west, z), xMax = LonToTileX(_east, z);
+                    int yMin = LatToTileY(_north, z), yMax = LatToTileY(_south, z);
+
+                    for (int x = xMin; x <= xMax; x++)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        string xDir = Path.Combine(tilesRoot, z.ToString(), x.ToString());
+                        Directory.CreateDirectory(xDir);
+
+                        for (int y = yMin; y <= yMax; y++)
+                        {
+                            token.ThrowIfCancellationRequested();
+
+                            string tilePath = Path.Combine(xDir, $"{y}.png");
+                            if (!File.Exists(tilePath))
+                            {
+                                try
+                                {
+                                    string url = $"https://a.tile.openstreetmap.org/{z}/{x}/{y}.png";
+                                    var response = await _httpClient.GetAsync(url, token);
+                                    response.EnsureSuccessStatusCode();
+                                    var data = await response.Content.ReadAsByteArrayAsync();
+                                    File.WriteAllBytes(tilePath, data);
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                    throw;
+                                }
+                                catch
+                                {
+                                    // ignore missing tiles or network errors
+                                }
+                            }
+
+                            // Update progress + ETA
+                            completed++;
+                            DownloadProgressBar.Value = completed;
+                            var elapsed = _downloadStopwatch.Elapsed;
+                            var remaining = TimeSpan.Zero;
+                            if (completed > 0)
+                                remaining = TimeSpan.FromTicks(elapsed.Ticks * (totalTiles - completed) / completed);
+                            DownloadStatusText.Text = $"{completed} / {totalTiles} tiles (ETA: {remaining:mm\\:ss})";
+                        }
+                    }
+                }
+
+                MessageBox.Show(
+                    $"Download complete!\nTiles saved under:\n{tilesRoot}",
+                    "Download Finished",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (OperationCanceledException)
+            {
+                DownloadStatusText.Text = "Cancelled";
+            }
+            finally
+            {
+                DownloadTilesButton.IsEnabled = true;
+                CancelDownloadButton.IsEnabled = false;
+                MinZoomSlider.IsEnabled = true;
+                MaxZoomSlider.IsEnabled = true;
+                _downloadStopwatch?.Stop();
+            }
         }
 
-        // DTO for JSON message from the page
+        /// <summary>Called when the user clicks Cancel.</summary>
+        private void CancelDownloadButton_Click(object sender, RoutedEventArgs e)
+        {
+            CancelDownloadButton.IsEnabled = false;
+            _downloadCts?.Cancel();
+        }
+
+        /// <summary>DTO for JSON message from the page</summary>
         private class BoundsMessage
         {
             public double south { get; set; }

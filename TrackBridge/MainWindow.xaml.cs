@@ -85,9 +85,6 @@ namespace TrackBridge
         {
             InitializeComponent();
 
-            // 🌍 Open the MapWindow when MainWindow starts
-            mapWindow = new MapWindow();
-
             cotSender = new CotUdpSender(NetworkConfig.CotIp, NetworkConfig.CotPort);
 
             CotHeartbeatManager = new CotHeartbeatManager(_cotSender);
@@ -700,15 +697,31 @@ namespace TrackBridge
             else
             {
                 mapWindow = new MapWindow();
-                // now it's safe to set Owner and Show, because we're responding to a user action
                 mapWindow.Owner = this;
+
+                // ▶️ When the map is actually ready, drop in your test marker
+                mapWindow.MapReady += () =>
+                {
+                    var testTrack = new EntityTrack
+                    {
+                        Id = 999,
+                        Lat = 32.8364,      // San Clemente Island
+                        Lon = -118.5208,
+                        CustomMarking = "TEST",
+                        TrackType = "Ground",
+                        LastUpdate = DateTime.Now
+                    };
+                    mapWindow.AddOrUpdateMarker(testTrack);
+                };
+
                 mapWindow.Show();
+
+
+                EntityGrid.ItemsSource = _entityTracks;
+                // … the rest of your constructor …
+
             }
         }
-
-
-
-
 
         private void OpenDownloadArea_Click(object s, RoutedEventArgs e)
             => new DownloadAreaWindow { Owner = this }.Show();

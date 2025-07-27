@@ -17,7 +17,7 @@
                       Grid.Row="0"
                       Margin="5"/>
 
-        <!-- ROW 1: Sliders + Button in a horizontal panel -->
+        <!-- ROW 1: Sliders + Button + Progress UI in a horizontal panel -->
         <StackPanel Grid.Row="1"
                     Orientation="Horizontal"
                     HorizontalAlignment="Center"
@@ -52,6 +52,26 @@
                     Width="140" Height="32"
                     Margin="20,0,0,0"
                     Click="DownloadTilesButton_Click"/>
+            <!-- Cancel Tiles Button -->
+            <Button x:Name="CancelDownloadButton"
+        Content="Cancel"
+        Width="80" Height="32"
+        Margin="10,0,0,0"
+        Click="CancelDownloadButton_Click"
+        IsEnabled="False"/>
+
+
+            <!-- Progress bar and status text -->
+            <ProgressBar x:Name="DownloadProgressBar"
+                         Width="200"
+                         Height="20"
+                         Minimum="0"
+                         Maximum="100"
+                         Margin="20,0,0,0"/>
+            <TextBlock x:Name="DownloadStatusText"
+                       Text="Ready"
+                       VerticalAlignment="Center"
+                       Margin="10,0,0,0"/>
         </StackPanel>
     </Grid>
 </Window>

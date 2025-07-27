@@ -10,6 +10,9 @@ namespace TrackBridge
 {
     public partial class MapWindow : Window
     {
+        /// <summary>Fires once map.html has finished loading.</summary>
+        public event Action MapReady;
+
         // Fallback zoom level when no local tiles
         private const int DefaultMaxZoom = 18;
 
@@ -25,6 +28,18 @@ namespace TrackBridge
             await MapView.EnsureCoreWebView2Async(env);
             var core = MapView.CoreWebView2;
 
+            // ▶ Hook DOMContentLoaded so JS is ready
+            core.DOMContentLoaded += (s, e) =>
+            {
+                MapReady?.Invoke();
+            };
+
+
+            // ▶ Hook map-loaded event
+            core.NavigationCompleted += (s, e) =>
+            {
+                MapReady?.Invoke();
+            };
             // Enable DevTools
             core.Settings.AreDevToolsEnabled = true;
 
@@ -37,6 +52,9 @@ namespace TrackBridge
 
             // Once initialized, load the map
             LoadMapWithProperZoom();
+
+
+
         }
 
         private void LoadMapWithProperZoom()
@@ -56,7 +74,11 @@ namespace TrackBridge
             }
 
             // If no local tiles, fall back to DefaultMaxZoom
-            int useMaxZoom = localMaxZoom > 0 ? localMaxZoom : DefaultMaxZoom;
+            // If *any* zoom‐folder exists (even “0”), use localMaxZoom; otherwise fall back
+            int useMaxZoom = Directory.GetDirectories(tilesRoot).Length > 0
+                ? localMaxZoom
+                : DefaultMaxZoom;
+
 
             RefreshMap(useMaxZoom);
         }
