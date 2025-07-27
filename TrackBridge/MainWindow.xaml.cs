@@ -408,6 +408,15 @@ namespace TrackBridge
                 DisIndicator.Fill = Brushes.Red;
             else
                 DisIndicator.Fill = Brushes.Green;
+
+            // ─── Prune any tracks older than 30 s ─────────────────
+            var staleThreshold = TimeSpan.FromSeconds(30);
+            var toRemove = _entityTracks
+                .Where(t => DateTime.Now - t.LastUpdate > staleThreshold)
+                .ToList();
+            foreach (var old in toRemove)
+                _entityTracks.Remove(old);
+
         }
 
 
