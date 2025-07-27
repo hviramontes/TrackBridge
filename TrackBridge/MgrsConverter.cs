@@ -1,17 +1,18 @@
-﻿using System;
+﻿using CoordinateSharp;
+using System;
 
 namespace TrackBridge
 {
     public static class MgrsConverter
     {
         /// <summary>
-        /// Original full‐precision conversion.
+        /// Full-precision MGRS conversion using CoordinateSharp.
         /// </summary>
         public static string LatLonToMgrs(double lat, double lon)
         {
-            // Your existing implementation here.
-            // For example purposes only:
-            throw new NotImplementedException("Implement your base MGRS conversion here");
+            var coord = new Coordinate(lat, lon);
+            // coord.MGRS is a MilitaryGridReferenceSystem object—call ToString()
+            return coord.MGRS.ToString();
         }
 
         /// <summary>
@@ -20,15 +21,11 @@ namespace TrackBridge
         /// </summary>
         public static string LatLonToMgrs(double lat, double lon, int digits)
         {
-            // Call the full conversion first
             string full = LatLonToMgrs(lat, lon);
-            // Determine how many characters to keep:
-            // Typically zone + square is 5 chars, then digits*2 more.
-            // e.g. "18SUJ23456789" → 5 + (digits*2)
-            int keep = 5 + (digits * 2);
-            if (full.Length >= keep)
-                return full.Substring(0, keep);
-            return full;
+            int keep = 5 + (digits * 2);  // zone+square (5 chars) + precision digits*2
+            return full.Length >= keep
+                ? full.Substring(0, keep)
+                : full;
         }
     }
 }

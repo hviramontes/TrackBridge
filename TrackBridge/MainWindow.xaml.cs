@@ -838,6 +838,7 @@ namespace TrackBridge
         }
 
         /// <summary>Fires on each tick to send due events.</summary>
+        /// <summary>Fires on each tick to send due events.</summary>
         private void ReplayTimer_Tick(object sender, EventArgs e)
         {
             if (_replayIndex >= _replayEvents.Count)
@@ -850,7 +851,7 @@ namespace TrackBridge
             var targetTime = _replayStartLogTime + elapsed;
 
             while (_replayIndex < _replayEvents.Count &&
-         _replayEvents[_replayIndex].time <= targetTime)
+                   _replayEvents[_replayIndex].time <= targetTime)
             {
                 // 1) Resend the XML over UDP
                 string xml = _replayEvents[_replayIndex].xml;
@@ -882,6 +883,7 @@ namespace TrackBridge
                 string country = group?.Attribute("country")?.Value ?? string.Empty;
                 string icon = group?.Attribute("iconType")?.Value ?? string.Empty;
 
+                // ← Here’s the only change: add Mgrs
                 var track = new EntityTrack
                 {
                     Id = id,
@@ -891,7 +893,8 @@ namespace TrackBridge
                     LastUpdate = DateTime.Now,
                     CustomMarking = callsign,
                     CountryCode = country,
-                    IconType = icon
+                    IconType = icon,
+                    Mgrs = MgrsConverter.LatLonToMgrs(lat, lon)
                 };
 
                 // 3) Update UI and map on the Dispatcher thread
@@ -913,10 +916,9 @@ namespace TrackBridge
                 // 4) Log and advance
                 SaveCotToDailyLog(xml);
                 _replayIndex++;
-
             }
-
         }
+
 
         /// <summary>Send a dummy “TEST” entity to verify TAK connectivity.</summary>
         private void TestTrack_Click(object sender, RoutedEventArgs e)
