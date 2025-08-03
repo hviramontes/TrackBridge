@@ -118,19 +118,33 @@
         <!-- Playback controls + Test Track button -->
         <!-- Playback controls + Test Track + Open Map buttons -->
         <DockPanel DockPanel.Dock="Bottom" Margin="5" LastChildFill="False">
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
                 <Button Content="Play"
-                Click="PlayReplay_Click"
-                Margin="0,0,5,0"
-                MinWidth="75"/>
+            Click="PlayReplay_Click"
+            Margin="0,0,5,0"
+            MinWidth="75"/>
                 <Button Content="Pause"
-                Click="PauseReplay_Click"
-                Margin="0,0,5,0"
-                MinWidth="75"/>
+            Click="PauseReplay_Click"
+            Margin="0,0,5,0"
+            MinWidth="75"/>
                 <Button Content="Stop"
-                Click="StopReplay_Click"
-                MinWidth="75"/>
+            Click="StopReplay_Click"
+            MinWidth="75"
+            Margin="0,0,10,0"/>
+                <TextBlock Text="Replay Speed:"
+               VerticalAlignment="Center"
+               Margin="5,0,5,0"/>
+                <ComboBox x:Name="ReplaySpeedComboBox"
+              Width="80"
+              SelectedIndex="1"
+              VerticalAlignment="Center">
+                    <ComboBoxItem Content="0.5x"/>
+                    <ComboBoxItem Content="1x"/>
+                    <ComboBoxItem Content="2x"/>
+                    <ComboBoxItem Content="5x"/>
+                </ComboBox>
             </StackPanel>
+
 
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,0,0">
                 <Button Content="Test Track"
@@ -178,9 +192,25 @@
                            Text="Total: 0"
                            Margin="10,0,0,0"
                            VerticalAlignment="Center"/>
+                    <TextBlock x:Name="ReplaySpeedText"
+                           Text="Speed: 1x"
+                           Margin="10,0,0,0"
+                           VerticalAlignment="Center"/>
+                    <TextBlock x:Name="ReplayStatusText"
+                           Text="Replay: ⏹️ Stopped"
+                           Margin="10,0,0,0"
+                           VerticalAlignment="Center"/>
+
                 </StackPanel>
             </StatusBarItem>
         </StatusBar>
+
+        <!-- Replay Progress Row -->
+        <StackPanel Orientation="Horizontal" Margin="10,0,0,5" Visibility="Collapsed" x:Name="ReplayProgressPanel">
+            <TextBlock Text="Replay Progress:" Foreground="White" VerticalAlignment="Center"/>
+            <ProgressBar x:Name="ReplayProgressBar" Width="300" Height="15" Margin="10,0"/>
+            <TextBlock x:Name="ReplayTimestampText" Foreground="LightGray" VerticalAlignment="Center" Margin="10,0"/>
+        </StackPanel>
 
         <!-- Log output -->
         <TextBox x:Name="LogOutput"

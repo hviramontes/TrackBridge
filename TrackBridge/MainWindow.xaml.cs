@@ -85,6 +85,13 @@ namespace TrackBridge
         {
             InitializeComponent();
 
+            ReplaySpeedComboBox.SelectionChanged += (s, e) =>
+            {
+                var speedText = ReplaySpeedComboBox.Text;
+                ReplaySpeedText.Text = $"Speed: {speedText}";
+            };
+
+
             cotSender = new CotUdpSender(NetworkConfig.CotIp, NetworkConfig.CotPort);
 
             CotHeartbeatManager = new CotHeartbeatManager(_cotSender);
@@ -326,6 +333,9 @@ namespace TrackBridge
         {
             _lastEntityReceived = DateTime.Now;
             var xml = CotBuilder.BuildCotXml(track);
+            if (!track.Publish)
+                return; // skip sending CoT for disabled tracks
+
             SaveCotToDailyLog(xml);
 
             // 3) Immediately add to grid *and* update the map
@@ -822,8 +832,13 @@ namespace TrackBridge
                 _replayStartWallClock = DateTime.Now;
                 _replayStartLogTime = _replayEvents[0].time;
             }
+            double speed = GetReplaySpeedMultiplier();
+            Log($"[REPLAY] Started at speed {speed:0.0}x");
 
             _replayTimer.Start();
+
+            ReplayStatusText.Text = "Replay: ▶️ Playing";
+
         }
 
         /// <summary>Pause the ongoing replay.</summary>
@@ -835,6 +850,8 @@ namespace TrackBridge
                 _isReplayPaused = true;
                 _pausedOffset = DateTime.Now - _replayStartWallClock;
             }
+            ReplayStatusText.Text = "Replay: ⏸️ Paused";
+
         }
 
         /// <summary>Stop and reset the replay.</summary>
@@ -844,6 +861,21 @@ namespace TrackBridge
             _replayIndex = 0;
             _isReplayPaused = false;
             _pausedOffset = TimeSpan.Zero;
+            ReplayStatusText.Text = "Replay: ⏹️ Stopped";
+
+        }
+
+        private double GetReplaySpeedMultiplier()
+        {
+            if (ReplaySpeedComboBox?.SelectedItem is ComboBoxItem selectedItem)
+            {
+                string content = selectedItem.Content.ToString();
+                if (content.EndsWith("x") && double.TryParse(content.TrimEnd('x'), out double multiplier))
+                {
+                    return multiplier;
+                }
+            }
+            return 1.0; // fallback to normal speed
         }
 
         /// <summary>Fires on each tick to send due events.</summary>
@@ -856,8 +888,12 @@ namespace TrackBridge
                 return;
             }
 
-            var elapsed = DateTime.Now - _replayStartWallClock;
-            var targetTime = _replayStartLogTime + elapsed;
+            double speed = GetReplaySpeedMultiplier();
+            var elapsed = (DateTime.Now - _replayStartWallClock).TotalSeconds * speed;
+            var targetTime = _replayStartLogTime.AddSeconds(elapsed);
+
+            // Update the replay speed visual indicator (e.g., status bar or label)
+            ReplaySpeedText.Text = $"Speed: {speed:0.0}x";
 
             while (_replayIndex < _replayEvents.Count &&
                    _replayEvents[_replayIndex].time <= targetTime)
@@ -905,6 +941,10 @@ namespace TrackBridge
                     IconType = icon,
                     Mgrs = MgrsConverter.LatLonToMgrs(lat, lon)
                 };
+
+                if (!track.Publish)
+                    return; // skip sending for non-published tracks
+
 
                 // 3) Update UI and map on the Dispatcher thread
                 Dispatcher.Invoke(() =>
