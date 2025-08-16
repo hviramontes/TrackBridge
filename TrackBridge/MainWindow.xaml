@@ -11,6 +11,7 @@
     <Window.Resources>
         <!-- Dim stale rows older than 30 seconds -->
         <local:StaleOpacityConverter x:Key="StaleOpacityConverter" ThresholdSeconds="30"/>
+        <local:AgeToBrushConverter x:Key="AgeToBrushConverter"/>
     </Window.Resources>
 
     <DockPanel>
@@ -239,6 +240,9 @@
                 <Style TargetType="DataGridRow">
                     <Setter Property="Opacity"
                             Value="{Binding Timestamp, Converter={StaticResource StaleOpacityConverter}}"/>
+                    <!-- NEW: background color based on age -->
+                    <Setter Property="Background"
+            Value="{Binding Timestamp, Converter={StaticResource AgeToBrushConverter}}"/>
                 </Style>
             </DataGrid.RowStyle>
             <DataGrid.Columns>

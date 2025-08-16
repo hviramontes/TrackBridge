@@ -18,6 +18,9 @@ namespace TrackBridge
             { "5", "Space"      }
         };
 
+        /// <summary>
+        /// The settings object we will read from / write to.
+        /// </summary>
         public FilterSettings Settings { get; }
 
         public FilterSettingsWindow(
@@ -27,20 +30,19 @@ namespace TrackBridge
         {
             InitializeComponent();
 
-            // Clone existing so Cancel won't mutate it
+            // 1) Clone all properties so Cancel won't mutate the original
             Settings = new FilterSettings
             {
                 AllowedDomains = existing.AllowedDomains.ToList(),
                 AllowedKinds = existing.AllowedKinds.ToList(),
-                PublishOnly = existing.PublishOnly
+                PublishOnly = existing.PublishOnly,
+                StaleThresholdSeconds = existing.StaleThresholdSeconds  // ← include this
             };
 
-            // Populate the Domains checkboxes
+            // 2) Populate the domain checkboxes
             foreach (var code in availableDomains)
             {
-                // Look up a friendly name, or fall back to the code itself
                 string name = DomainNames.TryGetValue(code, out var n) ? n : code;
-
                 var cb = new CheckBox
                 {
                     Tag = code,
@@ -51,7 +53,7 @@ namespace TrackBridge
                 DomainPanel.Children.Add(cb);
             }
 
-            // Populate the Kinds checkboxes (just the string values)
+            // 3) Populate the kind checkboxes
             foreach (var kind in availableKinds)
             {
                 var cb = new CheckBox
@@ -64,33 +66,42 @@ namespace TrackBridge
                 KindPanel.Children.Add(cb);
             }
 
+            // 4) Initialize the PublishOnly checkbox and the stale threshold textbox
             PublishOnlyCheckBox.IsChecked = Settings.PublishOnly;
+            StaleThresholdTextBox.Text = Settings.StaleThresholdSeconds.ToString();
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
         {
-            // Read back only the Tag values (the numeric codes) for domains
+            // 1) Read back allowed domains
             Settings.AllowedDomains = DomainPanel.Children
                 .OfType<CheckBox>()
                 .Where(cb => cb.IsChecked == true)
                 .Select(cb => cb.Tag.ToString())
                 .ToList();
 
-            // Read back kinds
+            // 2) Read back allowed kinds
             Settings.AllowedKinds = KindPanel.Children
                 .OfType<CheckBox>()
                 .Where(cb => cb.IsChecked == true)
                 .Select(cb => cb.Tag.ToString())
                 .ToList();
 
+            // 3) Read back PublishOnly
             Settings.PublishOnly = PublishOnlyCheckBox.IsChecked == true;
 
+            // 4) Read and save the stale threshold
+            if (int.TryParse(StaleThresholdTextBox.Text, out var secs))
+                Settings.StaleThresholdSeconds = secs;
+
+            // 5) Close with OK
             DialogResult = true;
             Close();
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
+            // Close with Cancel
             DialogResult = false;
             Close();
         }

@@ -19,21 +19,20 @@
             <RowDefinition Height="Auto"/>
             <!-- PublishOnly -->
             <RowDefinition Height="Auto"/>
+            <!-- Stale Threshold -->
+            <RowDefinition Height="Auto"/>
             <!-- Buttons -->
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
 
         <!-- Domains -->
         <TextBlock Grid.Row="0" FontWeight="Bold">Allowed Domains</TextBlock>
-        <ScrollViewer Grid.Row="1" Height="100" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="DomainPanel" />
         </ScrollViewer>
 
         <!-- Kinds -->
         <TextBlock Grid.Row="2" FontWeight="Bold" Margin="0,10,0,0">Allowed Kinds</TextBlock>
-        <ScrollViewer Grid.Row="3" Height="100" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="KindPanel" />
         </ScrollViewer>
 
@@ -43,13 +42,26 @@
                   Margin="0,10,0,0"
                   Content="Publish Only"/>
 
-        <!-- Buttons -->
+        <!-- Stale Threshold -->
         <StackPanel Grid.Row="5"
+                    Orientation="Horizontal"
+                    Margin="0,10,0,0">
+            <TextBlock Text="Stale Threshold (sec):"
+                       VerticalAlignment="Center"
+                       Margin="0,0,5,0"/>
+            <TextBox x:Name="StaleThresholdTextBox"
+                     Width="50"
+                     VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="6"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,10,0,0">
             <Button x:Name="SaveButton"
-                    Width="75" Margin="0,0,5,0"
+                    Width="75"
+                    Margin="0,0,5,0"
                     Content="Save"
                     Click="Save_Click"/>
             <Button x:Name="CancelButton"

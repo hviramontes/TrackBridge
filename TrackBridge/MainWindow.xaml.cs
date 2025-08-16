@@ -420,9 +420,10 @@ namespace TrackBridge
                 DisIndicator.Fill = Brushes.Green;
 
             // ─── Prune any tracks older than 30 s ─────────────────
-            var staleThreshold = TimeSpan.FromSeconds(30);
+            // ─── Auto-prune any tracks older than 5 minutes ─────────────────
+            var pruneThreshold = TimeSpan.FromMinutes(5);
             var toRemove = _entityTracks
-                .Where(t => DateTime.Now - t.LastUpdate > staleThreshold)
+                .Where(t => DateTime.Now - t.LastUpdate > pruneThreshold)
                 .ToList();
             foreach (var old in toRemove)
                 _entityTracks.Remove(old);
@@ -1116,7 +1117,33 @@ namespace TrackBridge
         }
 
         private void ApplyFilters()
-            => EntityGrid.ItemsSource = _entityTracks;
+        {
+            // Get a view over the full track list
+            var view = CollectionViewSource.GetDefaultView(_entityTracks);
+
+            // Apply domain, kind, and publish filters
+            view.Filter = obj =>
+            {
+                var t = obj as EntityTrack;
+                if (t == null) return false;
+
+                bool domainOk = _currentFilters.AllowedDomains.Count == 0
+                    || _currentFilters.AllowedDomains.Contains(t.Domain.ToString());
+                bool kindOk = _currentFilters.AllowedKinds.Count == 0
+                    || _currentFilters.AllowedKinds.Contains(t.TrackType);
+                bool publishOk = !_currentFilters.PublishOnly
+                    || t.Publish;
+
+                return domainOk && kindOk && publishOk;
+            };
+
+            // Refresh the view to apply the filter
+            view.Refresh();
+
+            // Bind the filtered view to the grid
+            EntityGrid.ItemsSource = view;
+        }
+
 
         // ─── TAK Connectivity Indicator Helper ─────────────────
         private void UpdateTakIndicator(bool success)

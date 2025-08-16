@@ -22,5 +22,10 @@ namespace TrackBridge
         /// Whether only "Publish=true" tracks should be sent.
         /// </summary>
         public bool PublishOnly { get; set; } = false;
+
+        /// <summary>
+        /// Number of seconds after which a track is considered stale.
+        /// </summary>
+        public int StaleThresholdSeconds { get; set; } = 30;
     }
 }
