@@ -156,15 +156,32 @@ namespace TrackBridge.DIS
                     track.IsCustomMarkingLocked = true;
                 }
 
-                // Extract DIS marking if unlocked
-                if (!track.IsCustomMarkingLocked && buffer.Length >= 83)
+                // Extract DIS marking if unlocked (Entity Marking = 1 byte charset + 11 bytes text)
+                // In Entity State PDUs (v6/7), the marking block begins at byte 128 of the PDU.
+                const int MARKING_OFFSET = 128;
+                const int MARKING_LEN = 11;
+
+                if (!track.IsCustomMarkingLocked && buffer.Length >= MARKING_OFFSET + 1 + MARKING_LEN)
                 {
-                    byte[] mb = new byte[11];
-                    Array.Copy(buffer, 72, mb, 0, 11);
-                    string marking = System.Text.Encoding.ASCII.GetString(mb).TrimEnd('\0');
-                    if (!string.IsNullOrWhiteSpace(marking))
-                        track.CustomMarking = marking;
+                    byte charset = buffer[MARKING_OFFSET]; // 1 = ASCII per DIS
+                    if (charset == 1)
+                    {
+                        var mb = new byte[MARKING_LEN];
+                        Buffer.BlockCopy(buffer, MARKING_OFFSET + 1, mb, 0, MARKING_LEN);
+
+                        string marking = System.Text.Encoding.ASCII
+                            .GetString(mb)
+                            .TrimEnd('\0', ' ');
+
+                        // must contain at least one letter or digit; otherwise ignore
+                        if (!string.IsNullOrWhiteSpace(marking) &&
+                            System.Text.RegularExpressions.Regex.IsMatch(marking, @"[A-Za-z0-9]"))
+                        {
+                            track.CustomMarking = marking;
+                        }
+                    }
                 }
+
 
                 // Fallback marking
                 if (string.IsNullOrWhiteSpace(track.CustomMarking))

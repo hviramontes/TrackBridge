@@ -7,25 +7,16 @@ namespace TrackBridge
 {
     public partial class NetworkSettingsWindow : Window
     {
-        // Parameterless ctor now uses the machine's IPv4 for DIS IP
         public NetworkSettingsWindow()
-            : this(
-                GetLocalIPAddress(),         // use detected IP here
-                NetworkConfig.DisPort,
-                NetworkConfig.CotIp,
-                NetworkConfig.CotPort)
-        {
-        }
-
-        // Original constructor: populates the UI with passed-in values
-        public NetworkSettingsWindow(string disIp, int disPort, string cotIp, int cotPort)
         {
             InitializeComponent();
+            Console.WriteLine($"Loading CoT IP: {NetworkConfig.CotIp}");
 
-            DisIpTextBox.Text = disIp;
-            DisPortTextBox.Text = disPort.ToString();
-            CotIpTextBox.Text = cotIp;
-            CotPortTextBox.Text = cotPort.ToString();
+            // Load current NetworkConfig values
+            DisIpTextBox.Text = NetworkConfig.DisIp;
+            DisPortTextBox.Text = NetworkConfig.DisPort.ToString();
+            CotIpTextBox.Text = NetworkConfig.CotIp;
+            CotPortTextBox.Text = NetworkConfig.CotPort.ToString();
         }
 
         // Helper: get the first non-loopback IPv4, or fall back to existing config
@@ -48,7 +39,6 @@ namespace TrackBridge
             {
                 // ignore any errors, fall back to the configured value
             }
-
             // If detection failed, use whatever is in NetworkConfig
             return NetworkConfig.DisIp;
         }
@@ -56,13 +46,46 @@ namespace TrackBridge
         // Save button handler
         private void Save_Click(object sender, RoutedEventArgs e)
         {
-            NetworkConfig.DisIp = DisIpTextBox.Text;
-            NetworkConfig.DisPort = int.Parse(DisPortTextBox.Text);
-            NetworkConfig.CotIp = CotIpTextBox.Text;
-            NetworkConfig.CotPort = int.Parse(CotPortTextBox.Text);
+            try
+            {
+                // Store old values
+                string oldDisIp = NetworkConfig.DisIp;
+                int oldDisPort = NetworkConfig.DisPort;
+                string oldCotIp = NetworkConfig.CotIp;
+                int oldCotPort = NetworkConfig.CotPort;
 
-            DialogResult = true;
-            Close();
+                // Update new values
+                string newDisIp = DisIpTextBox.Text;
+                int newDisPort = int.Parse(DisPortTextBox.Text);
+                string newCotIp = CotIpTextBox.Text;
+                int newCotPort = int.Parse(CotPortTextBox.Text);
+
+                // Log changes
+                if (Owner is MainWindow mainWindow)
+                {
+                    if (newDisIp != oldDisIp)
+                        mainWindow.Log($"[INFO] DIS IP changed to {newDisIp}");
+                    if (newDisPort != oldDisPort)
+                        mainWindow.Log($"[INFO] DIS Port changed to {newDisPort}");
+                    if (newCotIp != oldCotIp)
+                        mainWindow.Log($"[INFO] CoT IP changed to {newCotIp}");
+                    if (newCotPort != oldCotPort)
+                        mainWindow.Log($"[INFO] CoT Port changed to {newCotPort}");
+                }
+
+                // Apply changes
+                NetworkConfig.DisIp = newDisIp;
+                NetworkConfig.DisPort = newDisPort;
+                NetworkConfig.CotIp = newCotIp;
+                NetworkConfig.CotPort = newCotPort;
+
+                DialogResult = true;
+                Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Invalid input: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         // Cancel button handler

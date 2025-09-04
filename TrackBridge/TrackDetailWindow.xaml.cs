@@ -20,7 +20,7 @@ namespace TrackBridge
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             CustomMarking = TxtMarking.Text.Trim();
-            IsLocked = ChkLock.IsChecked == true;
+            IsLocked = true; // Lock by default to prevent DIS overwrites
             DialogResult = true;
         }
 

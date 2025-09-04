@@ -35,7 +35,7 @@ namespace TrackBridge.CoT
                 string how = "m-g";
                 string callsign = !string.IsNullOrWhiteSpace(track.CustomMarking)
                     ? track.CustomMarking
-                    : $"Track-{track.EntityId}";
+                    : track.EntityId;
 
                 string symbolId = !string.IsNullOrWhiteSpace(track.IconType) && IsValidMilStd2525(track.IconType)
                     ? track.IconType
